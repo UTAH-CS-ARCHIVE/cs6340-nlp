@@ -1,0 +1,235 @@
+# [Lecture Notes] Markov Chains in Natural Language Processing
+
+## 1. Introduction to Markov Chains
+A **Markov chain** is a stochastic process $\{X_t\}_{t\ge 1}$ on a finite state space $\mathcal S=\{1,\dots,K\}$ with the **Markov property**:
+
+$$
+
+P(X_t \mid X_1,\dots,X_{t-1}) \;=\; P(X_t \mid X_{t-1}).
+
+$$
+
+This assumption states that the future depends only on the **current state**, not the entire history.
+
+<br>
+
+## 2. Transition Matrix
+
+### 2.1 Definition
+The **transition matrix** $P\in\mathbb R^{K\times K}$ is
+
+$$
+
+P_{ij} \;=\; P(X_{t+1}=j \mid X_t=i),\quad i,j\in\mathcal S.
+
+$$
+
+### 2.2 Properties (Row-stochasticity, Powers, Chapman–Kolmogorov)
+1. **Non-negativity**: $P_{ij}\ge 0$.
+2. **Row-stochasticity**:
+
+$$
+
+\sum_{j=1}^K P_{ij}=1 \quad \text{for all } i.
+
+$$
+
+3. **$t$-step transitions**: $(P^t)_{ij}=P(X_{t+s}=j\mid X_s=i)$ (time-homogeneity).
+4. **Chapman–Kolmogorov**: For $t,s\ge 0$,
+
+$$
+
+P^{t+s} \;=\; P^t P^s,
+\quad\text{i.e.,}\quad
+(P^{t+s})_{ij}=\sum_{k}(P^t)_{ik}(P^s)_{kj}.
+
+$$
+
+*Proof sketch*: Apply the law of total probability and the Markov property by conditioning on the intermediate state $X_s=k$.
+
+5. **Row sums of powers**: By induction, $P^t$ is row-stochastic for all $t\ge 1$.
+
+### 2.3 Example in Language Modeling
+Vocabulary $\{ \text{the}, \text{cat}, \text{sat} \}$ with bigram transitions estimated from counts:
+
+| From \ To | the | cat | sat |
+|-----------|-----|-----|-----|
+| the       | 0.0 | 0.6 | 0.4 |
+| cat       | 0.2 | 0.0 | 0.8 |
+| sat       | 0.5 | 0.5 | 0.0 |
+
+Each row is the conditional distribution of the next word given the current word.
+
+<br>
+
+## 3. Stationary Distribution
+
+### 3.1 Definition
+A probability row vector $\pi=(\pi_1,\dots,\pi_K)$ is **stationary** for $P$ if
+
+$$
+
+\pi \;=\; \pi P.
+
+$$
+
+Equivalently, $\pi$ is a **left eigenvector** of $P$ with eigenvalue $1$ and $\sum_{i}\pi_i=1$, $\pi_i\ge 0$.
+
+### 3.2 Existence and Uniqueness (Irreducible + Aperiodic)
+- If the chain is **irreducible** (all states communicate) and **aperiodic** (gcd of return times to any state is $1$), then:
+  - There exists a **unique** stationary distribution $\pi$.
+  - Moreover, the chain is **ergodic**: starting from any initial distribution $\mu_0$, $\mu_0 P^t \to \pi$ as $t\to\infty$.
+- Intuition/justification: For finite, irreducible chains, there is at least one stationary distribution (Perron–Frobenius). Aperiodicity ensures convergence without periodic oscillations.
+
+### 3.3 Proof of Stationarity and Invariance across Time
+If $\pi = \pi P$, then for any $t\ge 1$,
+
+$$
+
+\pi P^t \;=\; \pi (P^t) \;=\; (\pi P) P^{t-1} \;=\; \pi P^{t-1} \;=\; \cdots \;=\; \pi.
+
+$$
+
+Thus, if $X_1\sim\pi$, then $X_t\sim\pi$ for all $t$; the distribution is time-invariant under the dynamics.
+
+### 3.4 Example Calculation
+Two states $\{R,S\}$ with
+
+$$
+
+P=\begin{bmatrix}
+0.7 & 0.3\\
+0.4 & 0.6
+\end{bmatrix}.
+
+$$
+
+Solve $\pi=\pi P$ and $\pi_R+\pi_S=1$:
+
+$$
+
+\pi_R = 0.7\pi_R + 0.4\pi_S,\qquad
+\pi_S = 0.3\pi_R + 0.6\pi_S.
+
+$$
+
+From the first: $0.3\pi_R=0.4\pi_S \Rightarrow \pi_R=\tfrac{4}{3}\pi_S$. Normalize:
+
+$$
+
+\frac{4}{3}\pi_S+\pi_S=1 \;\Rightarrow\; \pi_S=\frac{3}{7},\quad \pi_R=\frac{4}{7}.
+
+$$
+
+Hence
+
+$$
+
+\pi=\Big(\frac{4}{7},\frac{3}{7}\Big).
+
+$$
+
+### 3.5 Interpretation in Language Modeling (Long-run Frequencies)
+Let states be words. Suppose a bigram Markov chain with transition $P$ is **ergodic** and generates an infinitely long text. Then:
+- The **long-run fraction of positions** occupied by word $w$ equals $\pi_w$.
+
+Formally, define $N_T(w)=\sum_{t=1}^{T}\mathbf{1}\{X_t=w\}$.
+
+$$
+
+\frac{N_T(w)}{T} \;\xrightarrow[T\to\infty]{\text{a.s.}}\; \pi_w.
+
+$$
+
+This is the **ergodic theorem for Markov chains** (a strong law of large numbers): time averages equal expectations under the stationary distribution. Linguistically, $\pi$ is the **asymptotic unigram distribution** implied by $P$.
+
+Moreover, the **joint bigram distribution** for adjacent words in stationarity is
+
+$$
+
+P_{\text{bigram}}(i,j) \;=\; P(X_t=i, X_{t+1}=j) \;=\; \pi_i P_{ij}.
+
+$$
+
+Thus, $\pi$ couples with $P$ to determine both unigram and bigram frequencies.
+
+### 3.6 Convergence, Mixing, and Spectral Gap
+Let $\mu_t=\mu_0 P^t$ be the distribution at time $t$. If $P$ is irreducible and aperiodic, then
+
+$$
+
+\|\mu_t - \pi\|_{\text{TV}} \;\le\; C\,\rho^{\,t},
+\quad \text{with } \rho \in (0,1).
+
+$$
+
+For finite chains, one can take $\rho=|\lambda_2(P)|$, the magnitude of the **second-largest eigenvalue** of $P$, and $C$ depends on $\mu_0$. The **spectral gap** $1-|\lambda_2(P)|$ governs **mixing time**: larger gap → faster convergence to $\pi$.
+
+**Language view**: Function words (e.g., “the”, “of”) often connect many states, enlarging the spectral gap and accelerating mixing; rare words create “bottlenecks” that slow mixing.
+
+### 3.7 Estimating π and P from Corpus Counts; Joint/PMI Relations
+Given a long observed sequence $x_{1:T}$:
+
+- **Bigram counts**: $C_{ij}=\#\{t: x_t=i,\;x_{t+1}=j\}$.  
+  MLE transition:
+
+$$
+
+\widehat P_{ij} \;=\; \frac{C_{ij}}{\sum_{j'} C_{ij'}} \quad ( \text{row normalization} ).
+
+$$
+
+- **Unigram counts**: $N_i=\#\{t: x_t=i\}$. Then for large $T$,
+
+$$
+
+\widehat\pi_i \;=\; \frac{N_i}{T} \;\approx\; \pi_i,
+\qquad
+\widehat P_{ij} \;\approx\; P_{ij},
+\qquad
+\frac{C_{ij}}{\sum_{i',j'} C_{i'j'}} \;\approx\; \pi_i P_{ij}.
+
+$$
+
+Up to boundary effects, $N_i \approx \sum_j C_{ij} \approx \sum_j C_{ji}$, implying both outgoing and incoming totals approximate the same $\pi_i$ in stationarity.
+
+- **Pointwise Mutual Information (PMI)** for adjacent words:
+
+$$
+
+\operatorname{PMI}(i,j)
+\;=\;
+\log\frac{P(X_t=i,X_{t+1}=j)}{P(X_t=i)\,P(X_{t+1}=j)}
+\;=\;
+\log\frac{\pi_i P_{ij}}{\pi_i \pi_j}
+\;=\;
+\log\frac{P_{ij}}{\pi_j}.
+
+$$
+
+Thus, $\operatorname{PMI}(i,j)>0$ iff the transition $i\!\to\!j$ is more likely than selecting $j$ by chance from the unigram pool $\pi$.
+
+### 3.8 Reversibility (Detailed Balance) and Linguistic Asymmetry
+A chain is **reversible** if there exists $\pi$ such that (detailed balance)
+
+$$
+
+\pi_i P_{ij} \;=\; \pi_j P_{ji} \quad \forall i,j.
+
+$$
+
+Then the bigram flow $i\!\leftrightarrow\!j$ is symmetric in stationarity.  
+**Language note**: Natural language order is typically **asymmetric** (e.g., “the” → noun is common, noun → “the” much less so). Hence detailed balance rarely holds at the word level, though it can be a useful approximation for coarser tags (e.g., some POS transitions).
+
+<br>
+
+## 4. Interpretation of States in Language
+
+### 4.1 States as Words
+- In n-gram models, states are words. $P_{ij}$ models adjacency preferences; $\pi_j$ is the long-run fraction of positions with word $j$.
+
+### 4.2 States as POS Tags or Syntactic Units
+- States can be POS tags (N,V,ADJ,…) or phrase types. Here $\pi$ gives long-run tag frequencies, and $P$ models grammatical sequencing.
+
+### 4.3 Higher-Level State Abstractions
+- States may encode semantic roles (Agent, Predicate, Patient) or dialogue acts (Question, Answer). $\pi$ summarizes prevalence; $P$ models conversational flow.
